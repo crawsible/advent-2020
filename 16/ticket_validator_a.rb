@@ -27,7 +27,7 @@ data = File.read('data_ticket_notes.txt').split(/\n\n/)
 field_rule_matcher = /\A(.+): (\d+)-(\d+) or (\d+)-(\d+)\z/
 field_rules = data[0].split(/\n/).reduce({}) do |memo, line|
   field, min0, max0, min1, max1 = line.match(field_rule_matcher).captures
-  memo[field] = [(min0.to_i...max0.to_i), (min1.to_i...max1.to_i)]
+  memo[field] = [(min0.to_i..max0.to_i), (min1.to_i..max1.to_i)]
   memo
 end
 
