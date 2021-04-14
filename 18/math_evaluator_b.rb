@@ -29,13 +29,7 @@ class Calc
   def resolve_operation(expression, operator)
     operand0, operand1 = expression.match(/(\d+)[#{operator}](\d+)/).captures
 
-    result = nil
-    case operator
-    when '+'
-      result = operand0.to_i + operand1.to_i
-    when '*'
-      result = operand0.to_i * operand1.to_i
-    end
+    result = operand0.to_i.send(operator.to_sym, operand1.to_i)
 
     operator_index = expression.index(operator)
     open = operator_index - operand0.length
