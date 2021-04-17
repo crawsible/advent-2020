@@ -14,7 +14,7 @@ class Validator
   def matches_zero?(message)
     fortytwo = @rules["42"]
     thirtyone = @rules["31"]
-    return false unless message.match(/\A(#{fortytwo})+(#{thirtyone})+\z/)
+    return false unless message.match(/\A(#{fortytwo}){2,}(#{thirtyone})+\z/)
 
     fortytwo_matches = message.match(/\A(?:#{fortytwo})+/)
     fortytwo_count = fortytwo_matches[0].scan(/#{fortytwo}/).count
