@@ -1,21 +1,74 @@
 #!/usr/bin/env ruby
 
-class Tilemap
+class Matrix
+  def initialize(matrix)
+    @matrix = matrix
+  end
+
+  def [](i)
+    @matrix[i]
+  end
+
+  def x_length
+    @matrix.first.length
+  end
+
+  def y_length
+    @matrix.length
+  end
+
+  def rotate
+    @matrix = @matrix.transpose.map(&:reverse)
+  end
+
+  def flip
+    @matrix = @matrix.map(&:reverse)
+  end
+end
+
+class Tile < Matrix
+  def borders
+    {
+      top: @matrix.first.dup,
+      right: @matrix.map(&:last),
+      bottom: @matrix.last.reverse,
+      left: @matrix.map(&:first).reverse,
+    }
+  end
+
+  def border_direction(border)
+    borders.key(border)
+  end
+
+  def matchable_borders
+    borders.values + borders.values.map(&:reverse)
+  end
+
+  def strip_border
+    @matrix.shift
+    @matrix.pop
+
+    @matrix.each do |line|
+      line.shift
+      line.pop
+    end
+  end
+end
+
+class Tilemap < Matrix
   def initialize(id_tiles)
     @id_tiles = id_tiles
     assemble
   end
 
-  def tile_matrix
-    @tilemap.map do |tileline|
-      tileline.map { |id| tile(id) }
-    end
+  def [](i)
+    @matrix[i].map { |id| tile(id) }
   end
 
   private
   def assemble
     first_id = @id_tiles.keys.first
-    @tilemap = [[first_id]]
+    @matrix = [[first_id]]
 
     place_matching_tiles(first_id)
     @id_tiles.values.each(&:strip_border)
@@ -56,31 +109,31 @@ class Tilemap
     case
     when x == -1
       x = 0
-      extend_tilemap(:left)
+      extend_matrix(:left)
     when x == x_length
-      extend_tilemap(:right)
+      extend_matrix(:right)
     when y == -1
       y = 0
-      extend_tilemap(:top)
+      extend_matrix(:top)
     when y == y_length
-      extend_tilemap(:bottom)
+      extend_matrix(:bottom)
     end
 
-    @tilemap[y][x] = matched_id
+    @matrix[y][x] = matched_id
   end
 
   def border_matched?(id, direction)
     x, y = adjacent_coords(id, direction)
 
     return false unless (0...x_length).include?(x) && (0...y_length).include?(y)
-    !@tilemap[y][x].nil?
+    !@matrix[y][x].nil?
   end
 
   def adjacent_coords(id, direction)
     coords = [nil, nil]
     coords[1] = (0...y_length).find do |y|
       coords[0] = (0...x_length).find do |x|
-        @tilemap[y][x] == id
+        @matrix[y][x] == id
       end
     end
 
@@ -98,90 +151,27 @@ class Tilemap
     coords
   end
 
-  def extend_tilemap(direction)
+  def extend_matrix(direction)
     case direction
     when :top
-      @tilemap.prepend(Array.new(x_length))
+      @matrix.prepend(Array.new(x_length))
     when :right
-      @tilemap.each { |line| line.append(nil) }
+      @matrix.each { |line| line.append(nil) }
     when :bottom
-      @tilemap.append(Array.new(x_length))
+      @matrix.append(Array.new(x_length))
     when :left
-      @tilemap.each { |line| line.prepend(nil) }
+      @matrix.each { |line| line.prepend(nil) }
     end
   end
 
   def tile(id)
     @id_tiles[id]
   end
-
-  def x_length
-    @tilemap.first.length
-  end
-
-  def y_length
-    @tilemap.length
-  end
 end
 
-class Tile
-  def initialize(matrix)
-    @matrix = matrix
-  end
-
-  def [](i)
-    @matrix[i]
-  end
-
-  def borders
-    {
-      top: @matrix.first.dup,
-      right: @matrix.map(&:last),
-      bottom: @matrix.last.reverse,
-      left: @matrix.map(&:first).reverse,
-    }
-  end
-
-  def border_direction(border)
-    borders.key(border)
-  end
-
-  def matchable_borders
-    borders.values + borders.values.map(&:reverse)
-  end
-
-  def rotate
-    @matrix = @matrix.transpose.map(&:reverse)
-  end
-
-  def flip
-    @matrix = @matrix.map(&:reverse)
-  end
-
-  def strip_border
-    @matrix.shift
-    @matrix.pop
-
-    @matrix.each do |line|
-      line.shift
-      line.pop
-    end
-  end
-
-  def x_length
-    @matrix.first.length
-  end
-
-  def y_length
-    @matrix.length
-  end
-end
-
-class Bitmap < Tile
-  def initialize(tile_matrix)
-    @tile_matrix = tile_matrix
-    @matrix = []
-
+class Bitmap < Matrix
+  def initialize(tilemap)
+    @tilemap = tilemap
     build_matrix
   end
 
@@ -190,6 +180,21 @@ class Bitmap < Tile
     gourdy_hash_count = find_gourdies * GOURDY.flatten.count('#')
 
     total_hash_count - gourdy_hash_count
+  end
+
+  private
+  def build_matrix
+    tile_y_length = @tilemap[0][0].y_length
+    matrix_y_length = @tilemap.y_length * tile_y_length
+
+    @matrix = matrix_y_length.times.map do |i|
+      tilemap_i = i / tile_y_length
+      tileline_i = i % tile_y_length
+
+      @tilemap[tilemap_i].map do |tileline|
+        tileline[tileline_i]
+      end.flatten
+    end
   end
 
   def find_gourdies
@@ -202,23 +207,6 @@ class Bitmap < Tile
       end
 
       flip
-    end
-  end
-
-  private
-  def build_matrix
-    tile_height = @tile_matrix.flatten.first.y_length
-    height = @tile_matrix.length * tile_height
-
-    height.times do |i|
-      tile_matrix_i = i / tile_height
-      tile_line_i = i % tile_height
-
-      matrix_line = @tile_matrix[tile_matrix_i].map do |tile_line|
-        tile_line[tile_line_i]
-      end.flatten
-
-      @matrix << matrix_line
     end
   end
 
@@ -283,7 +271,7 @@ if __FILE__ == $0
   end.to_h
 
   tilemap = Tilemap.new(id_tiles)
-  bitmap = Bitmap.new(tilemap.tile_matrix)
+  bitmap = Bitmap.new(tilemap)
   puts bitmap.count_choppy_water
 end
 
