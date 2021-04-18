@@ -81,7 +81,7 @@ class Tilemap < Matrix
       matched_id, _ = @id_tiles.except(id).find do |_, tile|
         tile.matchable_borders.any?(border)
       end
-      next if matched_id.nil?
+      next unless matched_id
 
       orient_matched_tile(matched_id, border, direction)
       place_matched_tile(id, matched_id, direction)
@@ -90,7 +90,7 @@ class Tilemap < Matrix
   end
 
   def orient_matched_tile(id, border, direction)
-    tile(id).flip if tile(id).border_direction(border.reverse).nil?
+    tile(id).flip unless tile(id).border_direction(border.reverse)
     until tile(id).border_direction(border.reverse) == DIRECTION_PAIRS[direction]
       tile(id).rotate
     end
@@ -126,7 +126,7 @@ class Tilemap < Matrix
     x, y = adjacent_coords(id, direction)
 
     return false unless (0...x_length).include?(x) && (0...y_length).include?(y)
-    !@matrix[y][x].nil?
+    @matrix[y][x]
   end
 
   def adjacent_coords(id, direction)
