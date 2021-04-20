@@ -222,15 +222,12 @@ class MonsterHunter
     max_init_x = @bitmap.x_length - gourdy_x_length
     max_init_y = @bitmap.y_length - gourdy_y_length
 
-    num_appearances = 0
-    max_init_y.times do |y|
-      max_init_x.times do |x|
+    max_init_y.times.sum do |y|
+      max_init_x.times.count do |x|
         submatrix = gourdy_sized_submatrix(x, y)
-        num_appearances += 1 if matches_gourdy?(submatrix)
+        matches_gourdy?(submatrix)
       end
     end
-
-    num_appearances
   end
 
   GOURDY = [
@@ -282,4 +279,3 @@ if __FILE__ == $0
   monster_hunter = MonsterHunter.new(bitmap)
   puts monster_hunter.num_choppy_water
 end
-
