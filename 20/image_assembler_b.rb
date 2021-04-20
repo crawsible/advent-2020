@@ -18,11 +18,11 @@ class Matrix
   end
 
   def rotate
-    @matrix = @matrix.transpose.map(&:reverse)
+    @matrix = @matrix.reverse.transpose
   end
 
   def flip
-    @matrix = @matrix.map(&:reverse)
+    @matrix = @matrix.reverse
   end
 end
 
@@ -62,7 +62,7 @@ class Tilemap < Matrix
   end
 
   def [](i)
-    @matrix[i].map { |id| tile(id) }
+    super(i).map { |id| tile(id) }
   end
 
   private
@@ -106,17 +106,9 @@ class Tilemap < Matrix
   def place_matched_tile(id, matched_id, direction)
     x, y = adjacent_coords(id, direction)
 
-    case
-    when x == -1
-      x = 0
-      extend_matrix(:left)
-    when x == x_length
-      extend_matrix(:right)
-    when y == -1
-      y = 0
-      extend_matrix(:top)
-    when y == y_length
-      extend_matrix(:bottom)
+    unless (0...x_length).include?(x) && (0...y_length).include?(y)
+      extend_matrix(direction)
+      x, y = [0, x].max, [0, y].max
     end
 
     @matrix[y][x] = matched_id
