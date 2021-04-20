@@ -57,38 +57,51 @@ end
 
 class Tilemap < Matrix
   def initialize(tiles)
-    @tiles = tiles
-    assemble
+    assemble(tiles.dup)
   end
 
   private
-  def assemble
-    @matrix = [[@tiles.first]]
+  def assemble(unplaced_tiles)
+    first_tile = unplaced_tiles.shift
+    @matrix = [[first_tile]]
 
-    place_matching_tiles(@tiles.first)
-    @tiles.each(&:strip_border)
+    tile_queue = [first_tile]
+    until tile_queue.empty?
+      tile = tile_queue.shift
+      direction_tiles = find_unplaced_adjacent_tiles(tile, unplaced_tiles)
+
+      direction_tiles.each do |direction, adjacent_tile|
+        orient_adjacent_tile(tile, adjacent_tile, direction)
+        place_adjacent_tile(tile, adjacent_tile, direction)
+
+        tile_queue << unplaced_tiles.delete(adjacent_tile)
+      end
+    end
+
+    @matrix.flatten.each(&:strip_border)
   end
 
-  def place_matching_tiles(tile)
-    tile.borders.each do |direction, border|
-      next if border_matched?(tile, direction)
+  def find_unplaced_adjacent_tiles(tile, unplaced_tiles)
+    tile.borders.reduce({}) do |memo, (direction, border)|
+      next memo if border_matched?(tile, direction)
 
-      other_tiles = @tiles - [tile]
-      matched_tile = other_tiles.find do |matchable_tile|
+      adjacent_tile = unplaced_tiles.find do |matchable_tile|
         matchable_tile.matchable_borders.any?(border)
       end
-      next unless matched_tile
+      next memo unless adjacent_tile
 
-      orient_matched_tile(matched_tile, border, direction)
-      place_matched_tile(tile, matched_tile, direction)
-      place_matching_tiles(matched_tile)
+      memo[direction] = adjacent_tile
+      memo
     end
   end
 
-  def orient_matched_tile(tile, border, direction)
-    tile.flip unless tile.border_direction(border.reverse)
-    until tile.border_direction(border.reverse) == DIRECTION_PAIRS[direction]
-      tile.rotate
+  def orient_adjacent_tile(reference_tile, adjacent_tile, direction)
+    target_border = reference_tile.borders[direction].reverse
+    target_direction = DIRECTION_PAIRS[direction]
+
+    adjacent_tile.flip unless adjacent_tile.borders.values.include?(target_border)
+    until adjacent_tile.border_direction(target_border) == target_direction
+      adjacent_tile.rotate
     end
   end
 
@@ -99,15 +112,15 @@ class Tilemap < Matrix
     right: :left,
   }
 
-  def place_matched_tile(tile, matched_tile, direction)
-    x, y = adjacent_coords(tile, direction)
+  def place_adjacent_tile(reference_tile, adjacent_tile, direction)
+    x, y = adjacent_coords(reference_tile, direction)
 
     unless (0...x_length).include?(x) && (0...y_length).include?(y)
       extend_matrix(direction)
       x, y = [0, x].max, [0, y].max
     end
 
-    @matrix[y][x] = matched_tile
+    @matrix[y][x] = adjacent_tile
   end
 
   def border_matched?(tile, direction)
@@ -117,11 +130,11 @@ class Tilemap < Matrix
     @matrix[y][x]
   end
 
-  def adjacent_coords(tile, direction)
+  def adjacent_coords(reference_tile, direction)
     coords = [nil, nil]
     coords[1] = (0...y_length).find do |y|
       coords[0] = (0...x_length).find do |x|
-        @matrix[y][x] == tile
+        @matrix[y][x] == reference_tile
       end
     end
 
