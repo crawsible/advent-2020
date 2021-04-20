@@ -172,11 +172,8 @@ class Bitmap < Matrix
     build_matrix
   end
 
-  def count_choppy_water
-    total_hash_count = @matrix.flatten.count('#')
-    gourdy_hash_count = find_gourdies * GOURDY.flatten.count('#')
-
-    total_hash_count - gourdy_hash_count
+  def num_pounds
+    @matrix.flatten.count('#')
   end
 
   private
@@ -193,18 +190,47 @@ class Bitmap < Matrix
       end.flatten
     end
   end
+end
 
-  def find_gourdies
+class MonsterHunter
+  def initialize(bitmap)
+    @bitmap = bitmap
+  end
+
+  def num_choppy_water
+    total_pound_count = @bitmap.num_pounds
+    gourdy_pound_count = num_gourdies * GOURDY.flatten.count('#')
+
+    total_pound_count - gourdy_pound_count
+  end
+
+  private
+  def num_gourdies
     2.times do
       4.times do
-        count = gourdy_count
-        return count if count > 0
+        num = num_gourdies_at_current_orientation
+        return num if num > 0
 
-        rotate
+        @bitmap.rotate
       end
 
-      flip
+      @bitmap.flip
     end
+  end
+
+  def num_gourdies_at_current_orientation
+    max_init_x = @bitmap.x_length - gourdy_x_length
+    max_init_y = @bitmap.y_length - gourdy_y_length
+
+    num_appearances = 0
+    max_init_y.times do |y|
+      max_init_x.times do |x|
+        submatrix = gourdy_sized_submatrix(x, y)
+        num_appearances += 1 if matches_gourdy?(submatrix)
+      end
+    end
+
+    num_appearances
   end
 
   GOURDY = [
@@ -224,24 +250,9 @@ class Bitmap < Matrix
   def gourdy_sized_submatrix(x, y)
     gourdy_y_length.times.map do |dY|
       gourdy_x_length.times.map do |dX|
-        @matrix[y+dY][x+dX]
+        @bitmap[y+dY][x+dX]
       end
     end
-  end
-
-  def gourdy_count
-    max_init_x = x_length - gourdy_x_length
-    max_init_y = y_length - gourdy_y_length
-
-    gourdies = 0
-    max_init_y.times do |y|
-      max_init_x.times do |x|
-        submatrix = gourdy_sized_submatrix(x, y)
-        gourdies += 1 if matches_gourdy?(submatrix)
-      end
-    end
-
-    gourdies
   end
 
   def matches_gourdy?(matrix)
@@ -268,6 +279,7 @@ if __FILE__ == $0
 
   tilemap = Tilemap.new(tiles)
   bitmap = Bitmap.new(tilemap)
-  puts bitmap.count_choppy_water
+  monster_hunter = MonsterHunter.new(bitmap)
+  puts monster_hunter.num_choppy_water
 end
 
