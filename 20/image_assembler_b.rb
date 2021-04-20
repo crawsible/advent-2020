@@ -56,43 +56,39 @@ class Tile < Matrix
 end
 
 class Tilemap < Matrix
-  def initialize(id_tiles)
-    @id_tiles = id_tiles
+  def initialize(tiles)
+    @tiles = tiles
     assemble
-  end
-
-  def [](i)
-    super(i).map { |id| tile(id) }
   end
 
   private
   def assemble
-    first_id = @id_tiles.keys.first
-    @matrix = [[first_id]]
+    @matrix = [[@tiles.first]]
 
-    place_matching_tiles(first_id)
-    @id_tiles.values.each(&:strip_border)
+    place_matching_tiles(@tiles.first)
+    @tiles.each(&:strip_border)
   end
 
-  def place_matching_tiles(id)
-    tile(id).borders.each do |direction, border|
-      next if border_matched?(id, direction)
+  def place_matching_tiles(tile)
+    tile.borders.each do |direction, border|
+      next if border_matched?(tile, direction)
 
-      matched_id, _ = @id_tiles.except(id).find do |_, tile|
-        tile.matchable_borders.any?(border)
+      other_tiles = @tiles - [tile]
+      matched_tile = other_tiles.find do |matchable_tile|
+        matchable_tile.matchable_borders.any?(border)
       end
-      next unless matched_id
+      next unless matched_tile
 
-      orient_matched_tile(matched_id, border, direction)
-      place_matched_tile(id, matched_id, direction)
-      place_matching_tiles(matched_id)
+      orient_matched_tile(matched_tile, border, direction)
+      place_matched_tile(tile, matched_tile, direction)
+      place_matching_tiles(matched_tile)
     end
   end
 
-  def orient_matched_tile(id, border, direction)
-    tile(id).flip unless tile(id).border_direction(border.reverse)
-    until tile(id).border_direction(border.reverse) == DIRECTION_PAIRS[direction]
-      tile(id).rotate
+  def orient_matched_tile(tile, border, direction)
+    tile.flip unless tile.border_direction(border.reverse)
+    until tile.border_direction(border.reverse) == DIRECTION_PAIRS[direction]
+      tile.rotate
     end
   end
 
@@ -103,29 +99,29 @@ class Tilemap < Matrix
     right: :left,
   }
 
-  def place_matched_tile(id, matched_id, direction)
-    x, y = adjacent_coords(id, direction)
+  def place_matched_tile(tile, matched_tile, direction)
+    x, y = adjacent_coords(tile, direction)
 
     unless (0...x_length).include?(x) && (0...y_length).include?(y)
       extend_matrix(direction)
       x, y = [0, x].max, [0, y].max
     end
 
-    @matrix[y][x] = matched_id
+    @matrix[y][x] = matched_tile
   end
 
-  def border_matched?(id, direction)
-    x, y = adjacent_coords(id, direction)
+  def border_matched?(tile, direction)
+    x, y = adjacent_coords(tile, direction)
 
     return false unless (0...x_length).include?(x) && (0...y_length).include?(y)
     @matrix[y][x]
   end
 
-  def adjacent_coords(id, direction)
+  def adjacent_coords(tile, direction)
     coords = [nil, nil]
     coords[1] = (0...y_length).find do |y|
       coords[0] = (0...x_length).find do |x|
-        @matrix[y][x] == id
+        @matrix[y][x] == tile
       end
     end
 
@@ -154,10 +150,6 @@ class Tilemap < Matrix
     when :left
       @matrix.each { |line| line.prepend(nil) }
     end
-  end
-
-  def tile(id)
-    @id_tiles[id]
   end
 end
 
@@ -254,15 +246,14 @@ end
 if __FILE__ == $0
   data = File.read(ARGV[0]).split(/\n\n/)
 
-  id_tiles = data.map do |entry|
-    raw_id_matrix = entry.split(/\n/)
+  tiles = data.map do |entry|
+    raw_matrix = entry.split(/\n/)
 
-    id = raw_id_matrix.first.match(/\ATile (\d{4}):\z/).captures.first
-    matrix = raw_id_matrix.drop(1).map(&:chars)
-    [id, Tile.new(matrix)]
-  end.to_h
+    matrix = raw_matrix.drop(1).map(&:chars)
+    Tile.new(matrix)
+  end
 
-  tilemap = Tilemap.new(id_tiles)
+  tilemap = Tilemap.new(tiles)
   bitmap = Bitmap.new(tilemap)
   puts bitmap.count_choppy_water
 end
