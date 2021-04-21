@@ -28,12 +28,22 @@ end
 
 class Tile < Matrix
   def borders
-    {
+    @borders ||= {
       top: @matrix.first.dup,
       right: @matrix.map(&:last),
       bottom: @matrix.last.reverse,
       left: @matrix.map(&:first).reverse,
     }
+  end
+
+  def rotate
+    super
+    @borders = nil
+  end
+
+  def flip
+    super
+    @borders = nil
   end
 
   def border_direction(border)
