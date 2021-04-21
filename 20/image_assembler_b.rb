@@ -173,7 +173,7 @@ class Bitmap < Matrix
   end
 
   def num_pounds
-    @matrix.flatten.count('#')
+    @matrix.flatten.count(:"#")
   end
 
   private
@@ -199,7 +199,7 @@ class MonsterHunter
 
   def num_choppy_water
     total_pound_count = @bitmap.num_pounds
-    gourdy_pound_count = num_gourdies * GOURDY.flatten.count('#')
+    gourdy_pound_count = num_gourdies * GOURDY.flatten.count(:"#")
 
     total_pound_count - gourdy_pound_count
   end
@@ -231,9 +231,9 @@ class MonsterHunter
   end
 
   GOURDY = [
-    "                  # ".chars,
-    "#    ##    ##    ###".chars,
-    " #  #  #  #  #  #   ".chars,
+    "                  # ".chars.map(&:to_sym),
+    "#    ##    ##    ###".chars.map(&:to_sym),
+    " #  #  #  #  #  #   ".chars.map(&:to_sym),
   ]
 
   def gourdy_x_length
@@ -255,8 +255,8 @@ class MonsterHunter
   def matches_gourdy?(matrix)
     gourdy_y_length.times do |y|
       gourdy_x_length.times do |x|
-        next if GOURDY[y][x] == " "
-        return false unless matrix[y][x] == '#'
+        next if GOURDY[y][x] == :" "
+        return false unless matrix[y][x] == :"#"
       end
     end
 
@@ -270,7 +270,7 @@ if __FILE__ == $0
   tiles = data.map do |entry|
     raw_matrix = entry.split(/\n/)
 
-    matrix = raw_matrix.drop(1).map(&:chars)
+    matrix = raw_matrix.drop(1).map { |line| line.chars.map(&:to_sym) }
     Tile.new(matrix)
   end
 
